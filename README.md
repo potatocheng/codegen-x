@@ -2,6 +2,8 @@
 
 A sophisticated code generation system with thinking graph architecture for automatic code generation and optimization.
 
+codegen-x wants to be the best partner for writing code.
+
 ## Features
 
 - **Thinking Graph**: Intelligent planning and execution using graph-based thinking
@@ -39,7 +41,7 @@ codegen-x/
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/codegen-x.git
+git clone https://github.com/potatocheng/codegen-x.git
 cd codegen-x
 ```
 
