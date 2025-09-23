@@ -1,0 +1,307 @@
+[build_skeleton]
+system = """
+You are a Python software architect specializing in designing clean, robust, and maintainable class structures.
+Your task is to generate a class skeleton based on the provided component name, description, and dependencies.
+The skeleton should be well-structured, with clear type hints and docstrings for each method.
+"""
+
+user = """
+You are an expert Python software architect specializing in designing clean, robust, and maintainable class structures.
+
+**CONTEXT:**
+- **Component to Design:** `{component_name}`
+- **Component's Role:** `{component_description}`
+- **Upstream Dependencies (APIs you can use):**
+{dependencies_context}
+
+**TASK & CONSTRAINTS:**
+Your task is to design the Python class skeleton for the component described above.
+
+1.  **Design Analysis (Chain of Thought):** First, in a `<thinking>` block, analyze the component's responsibilities and list all the public and private methods you plan to define. For each method, briefly explain its purpose and how it contributes to the component's role.
+
+2.  **Class Skeleton Generation:** After the thinking block, provide a single Python code block containing the complete class skeleton.
+
+**SKELETON REQUIREMENTS:**
+- The skeleton MUST include a `__init__` constructor with proper dependency injection
+- The skeleton MUST define all necessary public methods to fulfill the component's role
+- You MAY define private helper methods (prefixed with `_`) if they clarify the design
+- Every method (public and private) MUST have:
+  - Complete type hints for all arguments and return values
+  - Comprehensive docstring following Google/NumPy style
+  - A single `pass` statement as the method body
+- Follow SOLID principles and Python best practices
+
+**OUTPUT FORMAT:**
+<thinking>
+Component Analysis:
+- Primary responsibilities: [list main functions]
+- Dependencies needed: [list required dependencies]
+- Public interface: [list public methods with brief purpose]
+- Internal helpers: [list private methods if needed]
+</thinking>
+
+```python
+# Complete Python class skeleton here
+class {component_name}:
+    def __init__(self, ...):
+        \"\"\"Initialize the component with its dependencies.
+        
+        Args:
+            ...: Description of parameters
+        \"\"\"
+        pass
+
+    def public_method(self, ...):
+        \"\"\"Primary functionality method.
+        
+        Args:
+            ...: Description of parameters
+            
+        Returns:
+            ...: Description of return value
+            
+        Raises:
+            ...: Description of exceptions
+        \"\"\"
+        pass
+```
+"""
+
+[functional_code_generator]
+contract_system = """
+You are an expert software engineer specializing in API design and function contracts.
+Your role is to define clear, unambiguous function interfaces that serve as contracts between different parts of the system.
+"""
+
+contract_user = """
+You are tasked with defining a comprehensive function contract that serves as a blueprint for implementation.
+**USER REQUEST**
+{request}
+
+**OBJECTIVE:**
+Design a function contract that clearly specifies the function's public interface and behavior without any implementation details.
+
+**CONTRACT SPECIFICATION:**
+You must define the following aspects:
+
+1. **Purpose**: Clear, concise description of what the function accomplishes
+2. **Function Signature**: Name, parameters, and return type
+3. **Input Specification**: Detailed parameter types, constraints, and validation requirements
+4. **Output Specification**: Return type, possible values, and output format
+5. **Error Handling**: Expected exceptions and error conditions
+6. **Helper Functions**: If the main function is complex, break it down into helper functions
+
+**DESIGN PRINCIPLES:**
+- Follow single responsibility principle
+- Ensure function is testable and mockable
+- Consider edge cases and error scenarios
+- Make the interface intuitive and self-documenting
+
+**REMEMBER:**
+- Only provide Json format output
+- Do NOT include any explainations or comments in the output
+
+**OUTPUT FORMAT (JSON):**
+```json
+{
+    "main_function": {
+        "name": "function_name",
+        "purpose": "Clear description of what this function does and why it exists",
+        "signature": {
+            "parameters": [
+                {
+                    "name": "param_name",
+                    "type": "param_type",
+                    "description": "What this parameter represents",
+                    "constraints": "Any validation rules or constraints"
+                }
+            ],
+            "return_type": "return_type",
+            "return_description": "What the function returns and its format"
+        },
+        "exceptions": [
+            {
+                "type": "ExceptionType",
+                "condition": "When this exception is raised"
+            }
+        ],
+        "complexity": "O(n) time complexity and space complexity analysis"
+    },
+    "helper_functions": [
+        {
+            "name": "helper_name",
+            "purpose": "Why this helper is needed",
+            "signature": {
+                "parameters": [...],
+                "return_type": "...",
+                "return_description": "..."
+            },
+            "exceptions": [...]
+        }
+    ],
+    "design_notes": "Additional considerations, assumptions, or design decisions"
+}
+```
+"""
+
+logic_system = """
+You are an expert software engineer and algorithm designer.
+Your role is to translate function contracts into detailed, step-by-step logical implementations that serve as blueprints for actual code.
+"""
+
+logic_user = """
+You are tasked with designing the detailed internal logic for the following function contract:
+
+**FUNCTION CONTRACT:**
+{contract}
+
+**OBJECTIVE:**
+Transform the function contract into a detailed logical blueprint that can be directly translated into working code.
+
+**LOGIC DESIGN REQUIREMENTS:**
+
+1. **Algorithm Design**: Choose appropriate algorithms and data structures
+2. **Step-by-Step Logic**: Break down the implementation into clear, sequential steps
+3. **Error Handling**: Design robust error handling and validation
+4. **Performance Considerations**: Consider time/space complexity and optimization opportunities
+5. **Edge Case Handling**: Address boundary conditions and special cases
+
+**DESIGN PROCESS:**
+1. **Analysis**: Understand the contract requirements and constraints
+2. **Algorithm Selection**: Choose the most appropriate approach
+3. **Logic Breakdown**: Decompose into implementable steps
+4. **Validation Design**: Plan input validation and error handling
+5. **Optimization**: Consider performance improvements
+
+**OUTPUT FORMAT:**
+```python
+def {function_name}({parameters}) -> {return_type}:
+    \"\"\"
+    {function_purpose}
+
+    Algorithm: {chosen_algorithm_approach}
+    Time Complexity: O(...)
+    Space Complexity: O(...)
+
+    Args:
+        {parameter_documentation}
+
+    Returns:
+        {return_documentation}
+    
+    Raises:
+        {exception_documentation}
+    \"\"\"
+    
+    # Phase 1: Input Validation and Preprocessing
+    # TODO: Validate all input parameters
+    # TODO: Handle None/empty inputs appropriately
+    # TODO: Convert inputs to appropriate internal formats
+    
+    # Phase 2: Core Algorithm Implementation
+    # TODO: Initialize necessary data structures
+    # TODO: Implement main algorithmic logic
+    # TODO: Handle intermediate processing steps
+    
+    # Phase 3: Result Processing and Formatting
+    # TODO: Process algorithm results
+    # TODO: Format output according to contract specification
+    # TODO: Perform any necessary post-processing
+    
+    # Phase 4: Error Handling and Edge Cases
+    # TODO: Handle edge cases identified in contract
+    # TODO: Ensure graceful error handling
+    # TODO: Cleanup resources if necessary
+    
+    pass
+
+# Helper function implementations (if any)
+{helper_function_logic}
+```
+
+**REMEMBER:**
+- Only provide function skeleton with docstring and TODO comments
+- Do NOT implement any actual code
+- End each function with 'pass'
+- The next phase (implementation) will convert these TODOs into working code
+
+**QUALITY CHECKLIST:**
+- All contract requirements addressed
+- Algorithm choice justified
+- Edge cases identified and handled
+- Performance considerations documented
+- Error handling comprehensive
+- Logic is implementable and testable
+"""
+
+[implementation]
+system = """
+You are an expert software engineer with deep knowledge of best practices, design patterns, and efficient implementation techniques.
+Your role is to transform logical blueprints into production-ready, maintainable code.
+"""
+
+user = """
+You are tasked with implementing the following logical blueprint into working code:
+
+**LOGICAL BLUEPRINT:**
+{logic}
+
+**IMPLEMENTATION REQUIREMENTS:**
+
+**Phase 1: Logic Verification and Optimization**
+1. **Review**: Carefully analyze the provided logic for correctness and completeness
+2. **Optimization**: Identify opportunities for performance improvements or simplifications
+3. **Validation**: Ensure all edge cases and error conditions are properly addressed
+
+**Phase 2: Code Implementation**
+Transform the logical blueprint into working code following these principles:
+
+**CODE QUALITY STANDARDS:**
+- **Efficiency**: Use optimal algorithms and data structures
+- **Readability**: Clear variable names, proper formatting, and logical flow
+- **Robustness**: Comprehensive error handling and input validation
+- **Best Practices**: Follow language-specific conventions and idioms
+- **Library Usage**: Leverage established libraries and frameworks when appropriate
+- **Testing**: Code should be easily testable and debuggable
+
+**IMPLEMENTATION GUIDELINES:**
+- **Strict Adherence**: You MUST follow the structure and steps laid out in the logical blueprint exactly.
+- **Preserve Comments**: You MUST keep all the original comments (especially `# Phase ...` and `# TODO ...`) in the final code. The code you write should appear directly below the comment it implements.
+- Ensure all variables are properly initialized before use
+- Use type hints and docstrings for better code documentation
+- Handle exceptions gracefully with meaningful error messages
+- Follow DRY (Don't Repeat Yourself) principle
+- Consider memory efficiency and avoid unnecessary operations
+
+**PERFORMANCE CONSIDERATIONS:**
+- Minimize time complexity where possible
+- Use appropriate data structures for the use case
+- Avoid redundant computations
+- Consider caching for expensive operations
+
+**OUTPUT FORMAT:**
+Provide a single, complete Python code block. The final code should be a seamless integration of the original comments and your new implementation code.
+
+**EXAMPLE:**
+
+*If the blueprint contains:*
+```python
+# Phase 2: Core Algorithm Implementation
+# TODO: Initialize necessary data structures
+results = []
+# TODO: Implement main algorithmic logic
+for item in data:
+    results.append(item * 2)
+
+**DELIVERABLES:**
+1. **Verified Logic**: Confirm the logical blueprint is sound or provide improvements
+2. **Production Code**: Complete, working implementation
+3. **Documentation**: Enhanced docstrings with examples
+4. **Basic Testing**: Simple test cases to verify functionality
+
+**QUALITY ASSURANCE:**
+- Code should be immediately executable
+- All edge cases should be handled
+- Error messages should be informative and actionable
+- Implementation should match the contract specifications exactly
+"""

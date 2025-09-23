@@ -1,0 +1,15 @@
+// 代码规划依赖图
+digraph GoT_Code_Plan {
+	node [fontname=Inter shape=box style=rounded]
+	rankdir=TB splines=ortho
+	"cfd5b52a-372d-4465-b079-bf869b41cb11" [label=<StateManagement<br/><font point-size='10'>(管理待办事项的状态)</font>> fillcolor="#f0f9ff" style=filled]
+	"d24959e5-5bdd-4a4c-8ef7-4f200191cae2" [label=<TodoItemComponent<br/><font point-size='10'>(显示单个待办事项)</font>> fillcolor="#f0f9ff" style=filled]
+	"84d9ae17-2ec4-4f28-90b1-8f194a6f3ef0" [label=<TodoListComponent<br/><font point-size='10'>(渲染整个列表)</font>> fillcolor="#fefce8" style=filled]
+	"0ca78340-2ade-4c42-ad44-9c95d45e49a0" [label=<AppContainer<br/><font point-size='10'>(应用主容器)</font>> fillcolor="#f0fdf4" style=filled]
+	"6747587b-5a62-478f-94b9-a253fc3fda3c" [label=<FinalAssembly<br/><font point-size='10'>(最终组装)</font>> fillcolor="#fef2f2" style=filled]
+	"cfd5b52a-372d-4465-b079-bf869b41cb11" -> "84d9ae17-2ec4-4f28-90b1-8f194a6f3ef0"
+	"cfd5b52a-372d-4465-b079-bf869b41cb11" -> "0ca78340-2ade-4c42-ad44-9c95d45e49a0"
+	"d24959e5-5bdd-4a4c-8ef7-4f200191cae2" -> "84d9ae17-2ec4-4f28-90b1-8f194a6f3ef0"
+	"84d9ae17-2ec4-4f28-90b1-8f194a6f3ef0" -> "6747587b-5a62-478f-94b9-a253fc3fda3c"
+	"0ca78340-2ade-4c42-ad44-9c95d45e49a0" -> "6747587b-5a62-478f-94b9-a253fc3fda3c"
+}
