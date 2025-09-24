@@ -48,7 +48,7 @@ class {component_name}:
         
         Args:
             ...: Description of parameters
-        \"\"\"
+        \"\"\"        
         pass
 
     def public_method(self, ...):
@@ -62,7 +62,7 @@ class {component_name}:
             
         Raises:
             ...: Description of exceptions
-        \"\"\"
+        \"\"\"        
         pass
 ```
 """
@@ -144,6 +144,45 @@ You must define the following aspects:
 ```
 """
 
+spec_system = """
+You are an expert software engineer producing an executable function specification (Spec v2).
+Return ONLY a JSON object with the required fields, no markdown fences, no commentary.
+All predicate expressions (pre/post/invariants) MUST be valid Python boolean expressions referencing only parameter names.
+Enumerate edge cases in examples (positive & negative). Negative examples MUST include a 'raises' field.
+Metamorphic relations must use one of relation: equal|subset|permutation|length_non_decreasing|custom.
+If custom, oracle_expr must explicitly compare original_result and new_result.
+Forbidden APIs: if unsure leave empty array.
+Complexity guarantee must specify big_o and optionally witness_rules (like 'no_sort','no_quadratic_nested_loops').
+"""
+
+spec_user = """
+Design an executable specification (Spec v2) for the requested functionality.
+USER REQUEST:
+{request}
+
+REQUIRED JSON KEYS:
+- main_function: { name, purpose, signature:{ parameters:[{name,type,description,constraints}], return_type, return_description }, exceptions:[{type, predicate, message}], complexity }
+- helper_functions: list (may be empty) each with same structure subset (predicate->condition allowed)
+- types: { parameters:[{name,type,description,nullable,union}], returns:{name,type,description,nullable,union}, exceptions:[{type,predicate,message}] }
+- pre: [{id, expr, message}]
+- post: [{id, expr, message}]
+- invariants: [{id, expr, message}]
+- examples: { positive:[{id, inputs, output, tags, notes}], negative:[{id, inputs, raises, tags, notes}] }
+- metamorphic_relations: [{id, transform_inputs, relation, oracle_expr, notes}]
+- forbidden_apis: []
+- complexity_guarantee: { big_o, witness_rules }
+- oracle: { type, ref, code } or null
+- design_notes: string
+- spec_version: 2
+
+RULES:
+1. Output MUST be a single JSON object.
+2. No trailing commas, ensure valid JSON.
+3. Use concise ids like P1,P2 for pre/post/invariants, EX_POS_1, EX_NEG_1 for examples.
+4. Provide at least 2 positive and 2 negative examples if possible.
+5. Keep expressions side-effect free.
+"""
+
 logic_system = """
 You are an expert software engineer and algorithm designer.
 Your role is to translate function contracts into detailed, step-by-step logical implementations that serve as blueprints for actual code.
@@ -176,7 +215,7 @@ Transform the function contract into a detailed logical blueprint that can be di
 **OUTPUT FORMAT:**
 ```python
 def {function_name}({parameters}) -> {return_type}:
-    \"\"\"
+    \"\"\"    
     {function_purpose}
 
     Algorithm: {chosen_algorithm_approach}
@@ -191,7 +230,7 @@ def {function_name}({parameters}) -> {return_type}:
     
     Raises:
         {exception_documentation}
-    \"\"\"
+    \"\"\"    
     
     # Phase 1: Input Validation and Preprocessing
     # TODO: Validate all input parameters

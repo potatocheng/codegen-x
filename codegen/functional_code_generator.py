@@ -5,8 +5,12 @@ from llm.message import Message
 import json
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional
-from dataclasses import dataclass
+from typing import Dict, List, Optional, Any
+from dataclasses import dataclass, field
+from datetime import datetime
+
+from codegen.spec import Spec
+from codegen.spec_validator import SpecValidator, SpecValidationError
 
 @dataclass
 class Parameter:
@@ -196,37 +200,54 @@ class FunctionalCodeGenerator:
         self.request: str = request
         self.contract_raw: str = ""
         self.contract: Optional[Contract] = None
+        self.spec: Optional[Spec] = None
         self.logic: str = ""
         self.implementation: str = ""
         self.output_file: str = output_file or self.DEFAULT_OUTPUT_FILE
         self.llm = create_llm(provider=provider, model_name=model_name)
         self.logger = logging.getLogger(__name__)               
 
-    def generate_contract(self):
+    def generate_spec(self):
         if not self.request.strip():
             raise ValueError("Request cannot be empty")
-            
         prompts = get_prompts("functional_code_generator")
-        contract_user_prompt = prompts['contract_user'].replace('{request}', self.request)
-        
+        user_prompt = prompts['spec_user'].replace('{request}', self.request)
         messages = [
-            Message(role="system", content=prompts['contract_system']),
-            Message(role="user", content=contract_user_prompt),
+            Message(role="system", content=prompts['spec_system']),
+            Message(role="user", content=user_prompt)
         ]
-        
         try:
             response = self.llm.call(messages=messages)
-            self.contract_raw = response.content
+            raw = response.content
+            self.contract_raw = raw
             self._save_contract_to_file()
-            self.contract = self._parse_contract_response(self.contract_raw)
-            self.logger.info(f"Contract generated successfully for function: {self.contract.name}")
+            self.spec = self._parse_spec_response(raw)
+            # validate spec before producing legacy contract
+            try:
+                _errors, warnings = SpecValidator.validate(self.spec)  # errors would raise before return
+                for w in warnings:
+                    self.logger.warning(f"Spec warning: {w.format()}")
+            except SpecValidationError as e:
+                self._save_failed_spec(raw, str(e))
+                raise
+            if self.spec and self.spec.main_function:
+                legacy_json = {
+                    "main_function": self.spec.main_function.to_dict(),
+                    "helper_functions": [h.to_dict() for h in self.spec.helper_functions],
+                    "design_notes": self.spec.design_notes,
+                }
+                self.contract = Contract.from_dict(legacy_json)
+            self.logger.info(f"Spec generated successfully for function: {self.spec.name if self.spec else 'UNKNOWN'}")
         except Exception as e:
             self._save_contract_to_file()
-            self.logger.error(f"Error generating contract: {e}")
+            self.logger.error(f"Error generating spec: {e}")
             if self.contract_raw:
-                self.logger.debug(f"Raw response: {self.contract_raw}")
+                self.logger.debug(f"Raw spec response: {self.contract_raw}")
             raise
-        
+
+    def generate_contract(self):  # pragma: no cover
+        self.generate_spec()
+
     def _save_contract_to_file(self):
         if self.contract_raw:
             try:
@@ -235,53 +256,55 @@ class FunctionalCodeGenerator:
             except Exception as e:
                 self.logger.warning(f"Failed to save contract to file: {e}")
     
-    def _parse_contract_response(self, response: str) -> Contract:
+    def _save_failed_spec(self, raw: str, errors: str):
+        try:
+            ts = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+            path = Path(self.output_file).parent / f"failed_spec_{ts}.json"
+            data = {"raw": raw, "errors": errors}
+            path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
+            self.logger.error(f"Failed spec saved to {path}")
+        except Exception as e:
+            self.logger.error(f"Could not save failed spec: {e}")
+    
+    def _parse_spec_response(self, response: str) -> Spec:
         if not response or not response.strip():
             raise ValueError("Empty response received from LLM")
-            
+        
         json_start = response.find('{')
         json_end = response.rfind('}') + 1
-        
         if json_start == -1 or json_end == 0:
             raise ValueError("No JSON object found in the response")
-        
         json_str = response[json_start:json_end]
         
         try:
-            return Contract.from_json(json_str)
+            return Spec.from_json(json_str)
         except json.JSONDecodeError as e:
-            raise ValueError(f"Invalid JSON in response: {e}")
+            raise ValueError(f"Invalid JSON in spec response: {e}")
         except KeyError as e:
-            raise ValueError(f"Missing required field in contract: {e}")
+            raise ValueError(f"Missing required field in spec: {e}")
 
     def generate_logic(self):
-        if not self.contract:
-            raise ValueError("Contract must be generated before generating logic")
-        
+        if not (self.contract or self.spec):
+            raise ValueError("Spec/Contract must be generated before generating logic")
         try:
             prompts = get_prompts("functional_code_generator")
-            
-            # 准备所有需要的参数
-            parameters = ", ".join([f"{param.name}: {param.type}" for param in self.contract.main_function.signature.parameters])
-            
+            target_contract = self.contract
+            parameters = ", ".join([f"{param.name}: {param.type}" for param in target_contract.main_function.signature.parameters])  # type: ignore
             parameter_docs = []
-            for param in self.contract.main_function.signature.parameters:
+            for param in target_contract.main_function.signature.parameters:  # type: ignore
                 param_doc = f"{param.name} ({param.type}): {param.description}"
-                if param.constraints:
+                if getattr(param, 'constraints', ''):
                     param_doc += f". Constraints: {param.constraints}"
                 parameter_docs.append(param_doc)
             parameter_documentation = "\n        ".join(parameter_docs)
-            
             exception_docs = []
-            for exc in self.contract.main_function.exceptions:
+            for exc in target_contract.main_function.exceptions:  # type: ignore
                 exception_docs.append(f"{exc.type}: {exc.condition}")
             exception_documentation = "\n        ".join(exception_docs)
-            
-            # 生成辅助函数的逻辑蓝图
             helper_function_logic = ""
-            if self.contract.helper_functions:
+            if target_contract.helper_functions:  # type: ignore
                 helper_parts = []
-                for helper in self.contract.helper_functions:
+                for helper in target_contract.helper_functions:  # type: ignore
                     helper_params = ", ".join([f"{param.name}: {param.type}" for param in helper.signature.parameters])
                     helper_part = f"""
 def {helper.name}({helper_params}) -> {helper.signature.return_type}:
@@ -292,25 +315,22 @@ def {helper.name}({helper_params}) -> {helper.signature.return_type}:
     pass"""
                     helper_parts.append(helper_part)
                 helper_function_logic = "\n".join(helper_parts)
-            
             user_logic_prompt = prompts['logic_user'].format(
                 contract=self.contract_raw,
-                function_name=self.contract.name,
+                function_name=target_contract.name,  # type: ignore
                 parameters=parameters,
-                return_type=self.contract.outputs,
-                function_purpose=self.contract.purpose,
+                return_type=target_contract.outputs,  # type: ignore
+                function_purpose=target_contract.purpose,  # type: ignore
                 chosen_algorithm_approach="TBD (to be determined by LLM)",
                 parameter_documentation=parameter_documentation,
-                return_documentation=self.contract.main_function.signature.return_description,
+                return_documentation=target_contract.main_function.signature.return_description,  # type: ignore
                 exception_documentation=exception_documentation,
                 helper_function_logic=helper_function_logic
             )
-            
             messages = [
                 Message(role="system", content=prompts['logic_system']),
                 Message(role="user", content=user_logic_prompt),
             ]
-            
             response = self.llm.call(messages=messages)
             self.logic = response.content
             self.logger.info("Logic generated successfully")
@@ -341,8 +361,8 @@ def {helper.name}({helper_params}) -> {helper.signature.return_type}:
             raise
     
     def generate_all(self) -> str:
-        """Generate contract, logic, and implementation in sequence"""
-        self.generate_contract()
+        """Generate spec, logic, and implementation in sequence"""
+        self.generate_spec()
         self.generate_logic()
         self.generate_implementation()
         return self.implementation
@@ -351,6 +371,7 @@ def {helper.name}({helper_params}) -> {helper.signature.return_type}:
         """Reset all generated content"""
         self.contract_raw = ""
         self.contract = None
+        self.spec = None
         self.logic = ""
         self.implementation = ""
 
