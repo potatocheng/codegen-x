@@ -344,3 +344,23 @@ for item in data:
 - Error messages should be informative and actionable
 - Implementation should match the contract specifications exactly
 """
+
+[functional_code_generator]
+step_graph_system = """
+You generate a StepGraph (execution plan) for a function specification (Spec V2). Output ONLY JSON with keys: version, steps, edges, order.
+Do not output code, explanations, or markdown fences.
+"""
+
+step_graph_user = """
+Given the Spec JSON:
+{spec_json}
+Produce a StepGraph plan.
+Rules:
+1. Step ids: S1..Sn consecutive.
+2. Each step has: id, intent (short imperative), pre_refs, post_refs, invariant_refs, evidence_hooks (may reference example ids), parents, children.
+3. Reference only existing predicate/example ids from Spec.
+4. edges is list of [parent, child]; must form a DAG.
+5. order is a topological order covering all step ids.
+6. Distribute pre predicates to early validation steps; post predicates to finalization step(s); invariants to loop/body steps if any.
+Return only JSON.
+"""
