@@ -1,54 +1,48 @@
 """
-简单示例：使用新的CodeGen-X架构生成代码
+CodeGen-X 使用示例
 
-这个示例展示了如何使用Agent + Tools架构生成代码。
+展示如何使用标准模式和认知驱动模式进行代码生成。
 """
+
 from llm.structured_llm import StructuredLLM
 from agent.code_agent import CodeGenAgent
-from logger import logger
-import logging
-
-# 配置日志级别
-logging.basicConfig(level=logging.INFO)
+from agent.cognitive_code_agent import CognitiveDrivenCodeGenAgent
 
 
-def example_basic_usage():
-    """基础用法示例"""
+def example_standard_mode():
+    """标准模式示例"""
     print("=" * 60)
-    print("示例 1: 基础用法")
+    print("示例 1: 标准代码生成模式")
     print("=" * 60)
 
-    # 初始化
     llm = StructuredLLM(model="gpt-4o-2024-08-06")
     agent = CodeGenAgent(llm, max_refine_attempts=3)
 
-    # 生成代码
     request = "写一个函数，从有序数组中删除重复元素，返回新数组的长度"
     print(f"\n需求: {request}\n")
 
     result = agent.generate(request)
 
-    # 检查结果
     if result["success"]:
-        print("✓ 生成成功！\n")
+        print("✅ 生成成功！\n")
         print(f"函数名: {result['spec']['name']}")
         print(f"目的: {result['spec']['purpose']}")
-        print(f"\n生成的代码:\n")
-        print(result["code"])
-        print(f"\n测试结果: {result['validation']['passed_count']}/{result['validation']['total_tests']} 通过")
+        print(f"\n生成的代码:\n{result['code']}")
+        validation = result['validation']
+        print(f"\n测试结果: {validation['passed_count']}/{validation['total_tests']} 通过")
         print(f"优化次数: {result['refine_attempts']}")
     else:
-        print(f"✗ 生成失败: {result.get('message', result.get('error'))}")
+        print(f"❌ 生成失败: {result.get('message', result.get('error'))}")
 
 
-def example_inspect_workflow():
-    """详细查看工作流程"""
+def example_cognitive_mode():
+    """认知驱动模式示例"""
     print("\n" + "=" * 60)
-    print("示例 2: 查看详细工作流程")
+    print("示例 2: 认知驱动代码生成模式")
     print("=" * 60)
 
     llm = StructuredLLM(model="gpt-4o-2024-08-06")
-    agent = CodeGenAgent(llm, max_refine_attempts=2)
+    agent = CognitiveDrivenCodeGenAgent(llm, max_refine_attempts=3, enable_cognitive_guidance=True)
 
     request = "实现二分查找算法"
     print(f"\n需求: {request}\n")
@@ -56,80 +50,80 @@ def example_inspect_workflow():
     result = agent.generate(request)
 
     if result["success"]:
-        # 查看规范
-        print("1. 生成的规范:")
-        spec = result["spec"]
-        print(f"   函数名: {spec['name']}")
-        print(f"   参数: {[p['name'] for p in spec['parameters']]}")
-        print(f"   返回类型: {spec['return_type']}")
-        print(f"   示例数量: {len(spec['examples'])}")
-        print(f"   边界情况: {len(spec['edge_cases'])} 个")
+        print("✅ 认知驱动生成成功！\n")
+        print(f"函数名: {result['spec']['name']}")
 
-        # 查看验证结果
-        print("\n2. 验证结果:")
-        validation = result["validation"]
-        for test in validation["test_results"]:
-            status = "✓" if test["passed"] else "✗"
-            print(f"   {status} {test['test_name']}: 输入={test['input_values']}")
+        # 显示认知分析
+        if "cognitive_analysis" in result:
+            analysis = result["cognitive_analysis"]
+            print(f"🧠 认知策略: {analysis.get('strategy_selection', 'N/A')}")
+            print(f"🎯 置信度: {analysis.get('confidence_level', 0):.2f}")
 
-        print(f"\n3. 最终代码已生成，经过 {result['refine_attempts']} 次优化")
+        # 显示决策链
+        if "cognitive_decisions" in result:
+            decisions = result["cognitive_decisions"]
+            print(f"\n📋 认知决策 ({len(decisions)} 个):")
+            for i, decision in enumerate(decisions[:3], 1):
+                print(f"  {i}. [{decision['stage']}] {decision['decision']}")
 
-
-def example_custom_parameters():
-    """自定义参数示例"""
-    print("\n" + "=" * 60)
-    print("示例 3: 自定义参数")
-    print("=" * 60)
-
-    # 使用DeepSeek API（兼容OpenAI）
-    llm = StructuredLLM(
-        model="deepseek-chat",
-        # base_url 和 api_key 从环境变量读取
-    )
-
-    # 自定义最大优化次数
-    agent = CodeGenAgent(
-        llm,
-        max_refine_attempts=5,  # 最多优化5次
-        max_iterations=15       # 最大总迭代次数
-    )
-
-    request = "写一个函数计算斐波那契数列的第n项"
-    result = agent.generate(request)
-
-    if result["success"]:
-        print(f"✓ 成功生成代码")
-        print(f"优化次数: {result['refine_attempts']}")
+        print(f"\n生成的代码:\n{result['code']}")
+        print(f"\n✅ 优化次数: {result['refine_attempts']}")
     else:
-        print(f"✗ 失败: {result.get('message')}")
+        print(f"❌ 生成失败: {result.get('message', result.get('error'))}")
 
 
-def example_tool_inspection():
-    """检查可用工具"""
+def example_compare_modes():
+    """对比两种模式"""
     print("\n" + "=" * 60)
-    print("示例 4: 检查可用工具")
+    print("示例 3: 对比标准模式和认知模式")
     print("=" * 60)
 
-    llm = StructuredLLM()
-    agent = CodeGenAgent(llm)
+    llm = StructuredLLM(model="gpt-4o-2024-08-06")
+    request = "写一个计算阶乘的递归函数"
 
-    print(f"\n可用工具数量: {len(agent.tools)}")
-    print("\n工具列表:")
-    for name, tool in agent.tools.items():
-        print(f"  - {name}: {tool.description}")
+    print(f"\n需求: {request}\n")
+
+    # 标准模式
+    print("📌 标准模式:")
+    standard_agent = CodeGenAgent(llm, max_refine_attempts=2)
+    standard_result = standard_agent.generate(request)
+    if standard_result["success"]:
+        print("✅ 成功生成")
+        print(f"   优化次数: {standard_result.get('refine_attempts', 0)}")
+    else:
+        print(f"❌ 失败")
+
+    # 认知模式
+    print("\n🧠 认知驱动模式:")
+    cognitive_agent = CognitiveDrivenCodeGenAgent(llm, max_refine_attempts=2, enable_cognitive_guidance=True)
+    cognitive_result = cognitive_agent.generate(request)
+    if cognitive_result["success"]:
+        print("✅ 成功生成")
+        print(f"   优化次数: {cognitive_result.get('refine_attempts', 0)}")
+        if "cognitive_summary" in cognitive_result:
+            summary = cognitive_result["cognitive_summary"]
+            print(f"   认知负荷: {summary.get('current_load', 0):.2f}")
+    else:
+        print(f"❌ 失败")
 
 
 if __name__ == "__main__":
     try:
         # 运行示例
-        example_basic_usage()
-        # example_inspect_workflow()
-        # example_custom_parameters()
-        # example_tool_inspection()
+        example_standard_mode()
+        # example_cognitive_mode()
+        # example_compare_modes()
+
+        print("\n" + "=" * 60)
+        print("💡 提示:")
+        print("  - 取消注释其他 example_* 调用来运行更多示例")
+        print("  - 确保设置了 OPENAI_API_KEY 环境变量")
+        print("  - 使用 main.py --cognitive 来启用命令行认知模式")
+        print("=" * 60)
 
     except KeyboardInterrupt:
         print("\n\n程序已中断")
     except Exception as e:
-        logger.error(f"发生错误: {str(e)}")
+        print(f"❌ 发生错误: {str(e)}")
         import traceback
         traceback.print_exc()
