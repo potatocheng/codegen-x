@@ -499,11 +499,11 @@ class CognitiveDrivenCodeGenAgent:
             StrategyType.TOP_DOWN: "structured",
             StrategyType.BOTTOM_UP: "incremental",
             StrategyType.DIVIDE_CONQUER: "modular",
-            StrategyType.ITERATIVE: "iterative",
-            StrategyType.EXPLORATORY: "exploratory",
+            StrategyType.INCREMENTAL: "iterative",
+            StrategyType.PROTOTYPE: "exploratory",
             StrategyType.PATTERN_BASED: "pattern_oriented",
             StrategyType.TEST_DRIVEN: "test_first",
-            StrategyType.REFACTOR_IMPROVE: "refactor_focused"
+            StrategyType.REFACTOR: "refactor_focused"
         }
         return strategy_mapping.get(strategy, "concise")
 
