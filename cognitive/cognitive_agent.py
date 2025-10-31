@@ -20,7 +20,7 @@ from .thinking_process import (
 )
 from .cognitive_load import CognitiveLoadEvaluator, CognitiveComplexity
 from .programming_strategy import ProgrammingStrategy, StrategyType, ProblemCharacteristics
-from .cognitive_line_explainer import CognitiveLineExplainer
+from .line_effectiveness_validator import LineEffectivenessValidator
 from llm.structured_llm import StructuredLLM
 
 
@@ -81,9 +81,7 @@ class CognitiveCodeGenAgent:
 
         self.cognitive_load_evaluator = CognitiveLoadEvaluator()
         self.programming_strategy = ProgrammingStrategy()
-
-        # 认知驱动的行级解释器
-        self.line_explainer = CognitiveLineExplainer(llm)
+        self.effectiveness_validator = LineEffectivenessValidator()
 
         # Cognitive trace for explainability
         self.cognitive_trace = {

@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 快速测试脚本
 
 测试认知驱动的代码生成系统是否正常工作
 """
+
+import sys
+import io
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 def test_imports():
     """测试所有模块是否可以正常导入"""
@@ -14,8 +19,8 @@ def test_imports():
         from cognitive.cognitive_model import CognitiveModel, ThinkingStage
         print("✅ cognitive_model 导入成功")
 
-        from cognitive.cognitive_line_explainer import CognitiveLineExplainer
-        print("✅ cognitive_line_explainer 导入成功")
+        from cognitive.line_effectiveness_validator import LineEffectivenessValidator
+        print("✅ line_effectiveness_validator 导入成功")
 
         from cognitive.cognitive_decision_tracker import CognitiveDecisionTracker
         print("✅ cognitive_decision_tracker 导入成功")
@@ -84,37 +89,32 @@ def test_basic_functionality():
         return False
 
 
-def test_cognitive_line_explanation():
-    """测试认知行级解释（无LLM版本）"""
-    print("\n🧠 测试认知行级解释...")
+def test_line_effectiveness_validation():
+    """测试行有效性验证"""
+    print("\n✅ 测试行有效性验证...")
 
     try:
-        from cognitive.cognitive_line_explainer import CognitiveLineExplainer
+        from cognitive.line_effectiveness_validator import LineEffectivenessValidator
 
-        # 创建模拟LLM
-        class MockLLM:
-            def generate_structured(self, prompt, output_schema, **kwargs):
-                # 返回默认的解释对象
-                from cognitive.cognitive_line_explainer import LineExplanation, CognitiveLineType
-                return output_schema(
-                    line_number=1,
-                    code_line="def test():",
-                    cognitive_type=CognitiveLineType.PROBLEM_SETUP,
-                    semantic_purpose="定义测试函数",
-                    cognitive_reasoning="建立函数接口",
-                    programmer_intent="创建测试环境",
-                    mental_model_impact="建立测试框架",
-                    cognitive_load=0.3
-                )
+        validator = LineEffectivenessValidator()
 
-        explainer = CognitiveLineExplainer(MockLLM())
-        result = explainer.explain_code_lines("def test(): pass")
+        # 测试代码（包含冗余行）
+        test_code = '''def test():
+    x = 1
+    x = 1  # 冗余
+    y = 2
+    return y'''
 
-        print(f"✅ 行级解释生成成功，分析了 {len(result['line_explanations'])} 行")
+        report = validator.analyze_code(test_code)
+
+        print(f"✅ 行有效性验证成功")
+        print(f"   - 必需行: {report.essential_lines}")
+        print(f"   - 冗余行: {report.redundant_lines}")
+        print(f"   - 有效性评分: {report.effectiveness_score:.2f}")
         return True
 
     except Exception as e:
-        print(f"❌ 行级解释测试失败: {e}")
+        print(f"❌ 行有效性验证测试失败: {e}")
         return False
 
 
@@ -133,7 +133,7 @@ def main():
     if test_basic_functionality():
         success_count += 1
 
-    if test_cognitive_line_explanation():
+    if test_line_effectiveness_validation():
         success_count += 1
 
     # 总结
@@ -142,10 +142,10 @@ def main():
     if success_count == total_tests:
         print("✅ 所有测试通过！认知驱动系统运行正常")
         print("\n🎯 系统已成功实现:")
-        print("  • 认知行级解释功能")
-        print("  • 认知决策追踪系统")
-        print("  • 认知负荷感知生成")
-        print("  • 完整的认知驱动架构")
+        print("  • ✅ 行有效性验证功能 - 确保每行代码都是必要的")
+        print("  • 🎯 认知决策追踪系统")
+        print("  • ⚖️ 认知负荷感知生成")
+        print("  • 🌟 完整的认知驱动架构")
 
         print("\n📝 使用方法:")
         print("  python main.py --cognitive \"写一个二分查找函数\"")

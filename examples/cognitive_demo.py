@@ -2,7 +2,7 @@
 认知驱动代码生成的测试和验证示例
 
 这个示例展示了如何使用认知驱动的代码生成系统，包括：
-1. 行级认知解释
+1. 行有效性验证（确保每行代码都是必要的）
 2. 认知决策追踪
 3. 认知负荷感知优化
 4. 完整的可解释性分析
@@ -14,22 +14,25 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from llm.structured_llm import StructuredLLM
 from agent.cognitive_code_agent import CognitiveDrivenCodeGenAgent
-from cognitive.cognitive_line_explainer import CognitiveLineExplainer
+from cognitive.line_effectiveness_validator import LineEffectivenessValidator
 import json
 
 
-def test_cognitive_line_explanation():
-    """测试认知行级解释功能"""
-    print("🧠 测试认知行级解释功能")
+def test_line_effectiveness_validation():
+    """测试行有效性验证功能"""
+    print("✅ 测试行有效性验证功能")
     print("=" * 50)
 
-    # 示例代码
+    # 示例代码（包含一些冗余和未使用的行）
     sample_code = '''def binary_search(arr, target):
     left, right = 0, len(arr) - 1
+    left = 0  # 冗余赋值
+    result = -1  # 未使用的变量
 
     while left <= right:
         mid = (left + right) // 2
         if arr[mid] == target:
+            result = mid  # 实际上没有用
             return mid
         elif arr[mid] < target:
             left = mid + 1
@@ -38,53 +41,43 @@ def test_cognitive_line_explanation():
 
     return -1'''
 
-    # 创建模拟LLM（实际使用时需要真实的LLM）
-    class MockStructuredLLM:
-        def generate_structured(self, prompt, output_schema, **kwargs):
-            from cognitive.cognitive_line_explainer import LineExplanation, CognitiveLineType
+    # 创建验证器
+    validator = LineEffectivenessValidator()
 
-            # 模拟返回认知解释
-            if "left, right = 0" in prompt:
-                return LineExplanation(
-                    line_number=2,
-                    code_line="left, right = 0, len(arr) - 1",
-                    cognitive_type=CognitiveLineType.MENTAL_MODEL,
-                    semantic_purpose="建立搜索空间的心理模型",
-                    cognitive_reasoning="程序员需要在心理上构建一个搜索区间的概念，这是二分查找算法的核心心理模型",
-                    programmer_intent="定义搜索的边界条件，为后续的区间缩减做准备",
-                    mental_model_impact="建立了'搜索区间'这一关键概念，为整个算法的执行奠定基础",
-                    cognitive_load=0.6
-                )
-            else:
-                return LineExplanation(
-                    line_number=1,
-                    code_line="def binary_search(arr, target):",
-                    cognitive_type=CognitiveLineType.PROBLEM_SETUP,
-                    semantic_purpose="定义问题求解的接口",
-                    cognitive_reasoning="程序员通过函数签名明确了问题的输入输出规范",
-                    programmer_intent="建立清晰的问题边界和接口规范",
-                    mental_model_impact="为整个搜索问题建立了明确的输入输出框架",
-                    cognitive_load=0.3
-                )
-
-    mock_llm = MockStructuredLLM()
-    explainer = CognitiveLineExplainer(mock_llm)
-
-    # 生成认知解释
-    result = explainer.explain_code_lines(sample_code)
+    # 分析代码有效性
+    report = validator.analyze_code(sample_code, function_goal="在排序数组中查找目标值")
 
     print("📋 代码:")
     print(sample_code)
-    print("\n🔍 认知解释摘要:")
-    print(f"- 分析行数: {result['cognitive_summary']['total_lines_analyzed']}")
-    print(f"- 平均认知负荷: {result['cognitive_summary']['average_cognitive_load']:.2f}")
-    print(f"- 复杂度级别: {result['cognitive_summary']['complexity_level']}")
 
-    print("\n🧠 认知功能簇:")
-    for cluster in result['dependency_graph']['cognitive_clusters']:
-        print(f"- {cluster['description']}: 行 {cluster['lines']}")
+    print("\n📊 有效性分析结果:")
+    print(f"- 总行数: {report.total_lines}")
+    print(f"- 必需行: {report.essential_lines}")
+    print(f"- 重要行: {report.important_lines}")
+    print(f"- 可选行: {report.optional_lines}")
+    print(f"- 冗余行: {report.redundant_lines}")
+    print(f"- 未使用行: {report.unused_lines}")
+    print(f"\n📈 有效性评分: {report.effectiveness_score:.2f}/1.0")
 
-    return result
+    print("\n🔍 详细分析:")
+    for analysis in report.analysis:
+        if analysis.utility.value != "optional" or analysis.code_line.strip().startswith('#'):
+            print(f"  第{analysis.line_number}行 [{analysis.utility.value}]: {analysis.code_line.strip()[:50]}")
+            print(f"    原因: {analysis.reason}")
+            if analysis.suggestion:
+                print(f"    建议: {analysis.suggestion}")
+
+    print("\n💡 优化建议:")
+    suggestions = validator.suggest_optimizations(report)
+    for suggestion in suggestions:
+        print(f"  {suggestion}")
+
+    if report.optimized_code:
+        print("\n✨ 优化后的代码:")
+        print(report.optimized_code)
+
+    return report
+
 
 
 def test_cognitive_decision_tracking():
@@ -266,7 +259,7 @@ def main():
     print("=" * 60)
 
     # 测试各个组件
-    test_cognitive_line_explanation()
+    test_line_effectiveness_validation()
     test_cognitive_decision_tracking()
     test_cognitive_load_aware_generation()
     demonstrate_full_cognitive_workflow()
@@ -274,13 +267,14 @@ def main():
     print("\n✅ 所有测试完成!")
     print("\n📝 总结:")
     print("本测试展示了CodeGen-X认知驱动系统的核心功能:")
-    print("1. 🧠 认知行级解释 - 提供深层语义解释")
+    print("1. ✅ 行有效性验证 - 确保每行代码都是必要的")
     print("2. 🎯 认知决策追踪 - 记录编程思维过程")
     print("3. ⚖️ 认知负荷感知 - 动态优化生成策略")
     print("4. 🌟 完整工作流 - 端到端认知驱动生成")
 
     print("\n🔬 这些功能为SCI论文发表提供了强有力的支撑:")
     print("- 创新性: 首次将认知科学深度集成到代码生成")
+    print("- 质量性: 行有效性验证确保代码质量")
     print("- 可解释性: 完整的认知过程追踪和解释")
     print("- 实用性: 认知负荷优化提升用户体验")
     print("- 科学性: 基于认知科学理论的系统设计")

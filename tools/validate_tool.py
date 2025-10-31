@@ -3,6 +3,7 @@ from typing import List, Dict, Optional, Any
 from tools.base import Tool, ToolInput, ToolOutput
 from tools.spec_tool import FunctionSpec
 from core import CodeExecutor, ExecutionStatus
+from cognitive.line_effectiveness_validator import LineEffectivenessValidator
 
 
 class ValidateInput(ToolInput):
@@ -33,6 +34,11 @@ class ValidationResult(BaseModel):
     test_results: List[TestResult] = Field(description="详细测试结果")
     suggestions: List[str] = Field(default_factory=list, description="改进建议")
 
+    # 新增：行有效性检查结果
+    line_effectiveness_score: Optional[float] = Field(default=None, description="代码行有效性评分 (0-1)")
+    line_effectiveness_analysis: Optional[Dict[str, Any]] = Field(default=None, description="行有效性分析详情")
+    has_redundant_code: bool = Field(default=False, description="是否存在冗余代码")
+
     class Config:
         """Pydantic配置"""
         extra = "forbid"
@@ -51,6 +57,7 @@ class ValidateTool(Tool):
     def __init__(self):
         super().__init__()
         self.executor = CodeExecutor(timeout=30.0, enable_security=True)
+        self.line_validator = LineEffectivenessValidator()
 
     def _execute_impl(self, input_data: ValidateInput) -> ToolOutput:
         """验证代码"""
@@ -92,20 +99,42 @@ class ValidateTool(Tool):
         # 生成改进建议
         suggestions = self._generate_suggestions(test_results, spec)
 
+        # 【新增】执行行有效性检查
+        line_effectiveness_report = self.line_validator.analyze_code(code, spec.purpose)
+        line_effectiveness_suggestions = self.line_validator.suggest_optimizations(line_effectiveness_report)
+
         validation_result = ValidationResult(
             is_valid=is_valid,
             total_tests=total_tests,
             passed_count=passed_count,
             test_results=test_results,
-            suggestions=suggestions
+            suggestions=suggestions,
+            # 【新增】行有效性检查结果
+            line_effectiveness_score=line_effectiveness_report.effectiveness_score,
+            line_effectiveness_analysis={
+                "total_lines": line_effectiveness_report.total_lines,
+                "essential_lines": line_effectiveness_report.essential_lines,
+                "important_lines": line_effectiveness_report.important_lines,
+                "optional_lines": line_effectiveness_report.optional_lines,
+                "redundant_lines": line_effectiveness_report.redundant_lines,
+                "unused_lines": line_effectiveness_report.unused_lines,
+            },
+            has_redundant_code=(line_effectiveness_report.redundant_lines > 0 or
+                               line_effectiveness_report.unused_lines > 0)
         )
+
+        # 添加行有效性建议到建议列表
+        if line_effectiveness_suggestions:
+            suggestions.append("\n📊 行有效性优化建议:")
+            suggestions.extend(line_effectiveness_suggestions)
 
         if is_valid:
             return ToolOutput.success_result(
                 data=validation_result,
-                message=f"所有测试通过: {passed_count}/{total_tests}",
+                message=f"所有测试通过: {passed_count}/{total_tests}，行有效性评分: {line_effectiveness_report.effectiveness_score:.2f}/1.0",
                 function_name=spec.name,
-                test_count=total_tests
+                test_count=total_tests,
+                effectiveness_score=line_effectiveness_report.effectiveness_score
             )
         else:
             return ToolOutput.warning_result(
@@ -218,7 +247,7 @@ except Exception as e:
         failed_tests = [r for r in test_results if not r.passed]
 
         if not failed_tests:
-            return ["✅ 所有测试通过，代码符合规范！"]
+            return ["[SUCCESS] All tests passed, code meets requirements!"]
 
         # 分析失败原因
         error_types = {}
@@ -233,13 +262,13 @@ except Exception as e:
 
         # 生成具体建议
         if error_types.get("output_mismatch", 0) > 0:
-            suggestions.append("🔍 检查函数逻辑，确保返回值与期望匹配")
+            suggestions.append("[CHECK] Review function logic to ensure return values match expectations")
 
         if error_types.get("runtime_error", 0) > 0:
-            suggestions.append("⚠️ 处理运行时异常，检查边界情况")
+            suggestions.append("[HANDLE] Handle runtime exceptions and check edge cases")
 
         # 检查是否处理了所有边界情况
         if spec.edge_cases:
-            suggestions.append(f"📋 确保处理以下边界情况: {', '.join(spec.edge_cases[:2])}")
+            suggestions.append(f"[EDGE] Ensure handling of these edge cases: {', '.join(spec.edge_cases[:2])}")
 
         return suggestions
