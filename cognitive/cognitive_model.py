@@ -9,6 +9,18 @@ from typing import List, Dict, Any, Optional, Union
 from enum import Enum
 import time
 from dataclasses import dataclass
+from datetime import datetime
+
+
+class WorkingMemoryItem(BaseModel):
+    """工作记忆项"""
+    content: str = Field(description="记忆内容")
+    importance: float = Field(description="重要性权重", ge=0, le=1)
+    timestamp: datetime = Field(description="创建时间")
+    access_count: int = Field(default=0, description="访问次数")
+
+    class Config:
+        extra = "forbid"
 
 
 class ThinkingStage(Enum):
@@ -25,12 +37,17 @@ class ThinkingStage(Enum):
 class CognitiveState(BaseModel):
     """认知状态"""
     stage: ThinkingStage = Field(description="当前思维阶段")
-    confidence: float = Field(description="置信度 (0-1)", ge=0, le=1)
+    focus: str = Field(default="", description="当前关注焦点")
+    working_memory: List[WorkingMemoryItem] = Field(default_factory=list, description="工作记忆")
     mental_effort: float = Field(description="心理努力程度 (0-1)", ge=0, le=1)
-    working_memory_load: float = Field(description="工作记忆负荷 (0-1)", ge=0, le=1)
-    focused_concepts: List[str] = Field(description="当前关注的概念")
-    discovered_insights: List[str] = Field(description="发现的洞察")
-    pending_questions: List[str] = Field(description="待解决的问题")
+    confidence: float = Field(description="置信度 (0-1)", ge=0, le=1)
+    timestamp: datetime = Field(default_factory=datetime.now, description="状态时间戳")
+
+    # 保留原有字段以确保兼容性
+    working_memory_load: float = Field(default=0.0, description="工作记忆负荷 (0-1)", ge=0, le=1)
+    focused_concepts: List[str] = Field(default_factory=list, description="当前关注的概念")
+    discovered_insights: List[str] = Field(default_factory=list, description="发现的洞察")
+    pending_questions: List[str] = Field(default_factory=list, description="待解决的问题")
 
     class Config:
         extra = "forbid"
@@ -42,8 +59,11 @@ class CognitiveTransition:
     from_stage: ThinkingStage
     to_stage: ThinkingStage
     trigger: str  # 触发转移的条件
-    duration: float  # 转移耗时
-    confidence_change: float  # 置信度变化
+    timestamp: datetime = None  # 转移时间戳
+
+    def __post_init__(self):
+        if self.timestamp is None:
+            self.timestamp = datetime.now()
 
 
 class CognitiveModel(BaseModel):
@@ -66,8 +86,10 @@ class CognitiveModel(BaseModel):
         if "current_state" not in data:
             data["current_state"] = CognitiveState(
                 stage=ThinkingStage.PROBLEM_COMPREHENSION,
-                confidence=0.3,
+                focus="",
+                working_memory=[],
                 mental_effort=0.5,
+                confidence=0.3,
                 working_memory_load=0.2,
                 focused_concepts=[],
                 discovered_insights=[],
@@ -90,13 +112,10 @@ class CognitiveModel(BaseModel):
         new_state = self._compute_new_state(new_stage)
 
         # 记录转移
-        duration = time.time() - start_time
         transition = CognitiveTransition(
             from_stage=self.current_state.stage,
             to_stage=new_stage,
-            trigger=trigger,
-            duration=duration,
-            confidence_change=new_state.confidence - self.current_state.confidence
+            trigger=trigger
         )
         self.transitions.append(transition)
 
@@ -223,8 +242,10 @@ class CognitiveModel(BaseModel):
         # 保留一些历史信息
         return CognitiveState(
             stage=new_stage,
-            confidence=characteristics["confidence"],
+            focus="",
+            working_memory=self.current_state.working_memory,
             mental_effort=characteristics["mental_effort"],
+            confidence=characteristics["confidence"],
             working_memory_load=characteristics["working_memory_load"],
             focused_concepts=self.current_state.focused_concepts,
             discovered_insights=self.current_state.discovered_insights,
